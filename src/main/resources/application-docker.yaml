@@ -34,3 +34,11 @@ app:
     exchange: rabam.events.exchange
     audit-queue: rabam.audit.queue
     audit-routing-key: rabam.audit.event
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
