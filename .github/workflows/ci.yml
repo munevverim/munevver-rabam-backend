@@ -11,9 +11,17 @@ jobs:
     name: Backend Tests
     runs-on: ubuntu-latest
 
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Show Docker info
+        run: |
+          docker version
+          docker info
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -23,7 +31,19 @@ jobs:
           cache: maven
 
       - name: Run backend tests
-        run: mvn test
+        run: mvn -B -e test
+
+      - name: Print test reports on failure
+        if: failure()
+        run: |
+          echo "Surefire report files:"
+          ls -la target/surefire-reports || true
+
+          echo "Surefire TXT reports:"
+          cat target/surefire-reports/*.txt || true
+
+          echo "Surefire XML reports:"
+          cat target/surefire-reports/*.xml || true
 
   frontend-build:
     name: Frontend Build

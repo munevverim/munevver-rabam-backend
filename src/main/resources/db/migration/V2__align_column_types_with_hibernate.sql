@@ -1,0 +1,25 @@
+ALTER TABLE services
+    MODIFY COLUMN description VARCHAR(255) NULL;
+
+ALTER TABLE services
+    MODIFY COLUMN status ENUM('PENDING', 'IN_PROGRESS', 'DONE') NOT NULL;
+
+ALTER TABLE services
+    MODIFY COLUMN version BIGINT NULL;
+
+ALTER TABLE audit_logs
+    MODIFY COLUMN event_type ENUM(
+    'CAR_CREATED',
+    'CAR_UPDATED',
+    'SERVICE_CREATED',
+    'SERVICE_UPDATED'
+    ) NOT NULL;
+
+ALTER TABLE audit_logs
+    MODIFY COLUMN entity_type ENUM(
+    'CAR',
+    'SERVICE'
+    ) NOT NULL;
+
+ALTER TABLE audit_logs
+    MODIFY COLUMN payload TEXT NOT NULL;
