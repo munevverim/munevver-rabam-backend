@@ -3,6 +3,7 @@ package com.munevver.rabam.car.service;
 import com.munevver.rabam.car.dto.CarRequest;
 import com.munevver.rabam.car.dto.CarResponse;
 import com.munevver.rabam.car.entity.Car;
+import com.munevver.rabam.car.mapper.CarMapper;
 import com.munevver.rabam.car.repository.CarRepository;
 import com.munevver.rabam.common.exception.ConflictException;
 import com.munevver.rabam.common.exception.ResourceNotFoundException;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -41,6 +43,9 @@ class CarServiceImplTest {
     @Mock
     private CarRepository carRepository;
 
+    @Spy
+    private CarMapper carMapper = new CarMapper();
+
     @Mock
     private DomainEventPublisher domainEventPublisher;
 
@@ -60,6 +65,7 @@ class CarServiceImplTest {
     @Test
     void shouldGetAllCars() {
         Pageable pageable = PageRequest.of(0, 10);
+
         Car car = buildCar(1L, "34 ABC 123", "Toyota", "Corolla");
 
         Page<Car> carPage = new PageImpl<>(List.of(car), pageable, 1);
@@ -82,6 +88,8 @@ class CarServiceImplTest {
         when(carRepository.save(any(Car.class))).thenAnswer(invocation -> {
             Car car = invocation.getArgument(0);
             car.setId(1L);
+            car.setCreatedAt(LocalDateTime.now());
+            car.setUpdatedAt(LocalDateTime.now());
             return car;
         });
 
@@ -143,6 +151,7 @@ class CarServiceImplTest {
     @Test
     void shouldThrowNotFoundExceptionWhenCarDoesNotExistOnUpdate() {
         Long carId = 99L;
+
         CarRequest request = buildCarRequest("34 ABC 123", "Toyota", "Corolla");
 
         when(carRepository.findById(carId)).thenReturn(Optional.empty());

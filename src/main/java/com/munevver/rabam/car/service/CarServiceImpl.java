@@ -3,6 +3,7 @@ package com.munevver.rabam.car.service;
 import com.munevver.rabam.car.dto.CarRequest;
 import com.munevver.rabam.car.dto.CarResponse;
 import com.munevver.rabam.car.entity.Car;
+import com.munevver.rabam.car.mapper.CarMapper;
 import com.munevver.rabam.car.repository.CarRepository;
 import com.munevver.rabam.common.exception.ConflictException;
 import com.munevver.rabam.common.exception.ResourceNotFoundException;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
+    private final CarMapper carMapper;
     private final DomainEventPublisher domainEventPublisher;
     private final I18nMessageService messageService;
 
@@ -31,7 +33,7 @@ public class CarServiceImpl implements CarService {
     @Transactional(readOnly = true)
     public Page<CarResponse> getAllCars(Pageable pageable) {
         return carRepository.findAll(pageable)
-                .map(this::mapToResponse);
+                .map(carMapper::toResponse);
     }
 
     @Override
@@ -45,16 +47,15 @@ public class CarServiceImpl implements CarService {
             );
         }
 
-        Car car = new Car();
-        car.setLicensePlate(normalizedPlate);
-        car.setBrand(request.getBrand());
-        car.setModel(request.getModel());
+        Car car = carMapper.toEntity(request, normalizedPlate);
 
         Car savedCar = carRepository.save(car);
 
-        domainEventPublisher.publish(buildCarEvent(DomainEventType.CAR_CREATED, savedCar));
+        domainEventPublisher.publish(
+                buildCarEvent(DomainEventType.CAR_CREATED, savedCar)
+        );
 
-        return mapToResponse(savedCar);
+        return carMapper.toResponse(savedCar);
     }
 
     @Override
@@ -75,26 +76,15 @@ public class CarServiceImpl implements CarService {
             );
         }
 
-        car.setLicensePlate(normalizedPlate);
-        car.setBrand(request.getBrand());
-        car.setModel(request.getModel());
+        carMapper.updateEntity(car, request, normalizedPlate);
 
         Car updatedCar = carRepository.save(car);
 
-        domainEventPublisher.publish(buildCarEvent(DomainEventType.CAR_UPDATED, updatedCar));
+        domainEventPublisher.publish(
+                buildCarEvent(DomainEventType.CAR_UPDATED, updatedCar)
+        );
 
-        return mapToResponse(updatedCar);
-    }
-
-    private CarResponse mapToResponse(Car car) {
-        return CarResponse.builder()
-                .id(car.getId())
-                .licensePlate(car.getLicensePlate())
-                .brand(car.getBrand())
-                .model(car.getModel())
-                .createdAt(car.getCreatedAt())
-                .updatedAt(car.getUpdatedAt())
-                .build();
+        return carMapper.toResponse(updatedCar);
     }
 
     private DomainEvent buildCarEvent(DomainEventType eventType, Car car) {

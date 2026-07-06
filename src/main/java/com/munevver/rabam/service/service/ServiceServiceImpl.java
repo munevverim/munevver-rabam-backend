@@ -15,6 +15,7 @@ import com.munevver.rabam.service.dto.ServiceResponse;
 import com.munevver.rabam.service.dto.ServiceUpdateRequest;
 import com.munevver.rabam.service.entity.Service;
 import com.munevver.rabam.service.enums.ServiceStatus;
+import com.munevver.rabam.service.mapper.ServiceMapper;
 import com.munevver.rabam.service.repository.ServiceRepository;
 import com.munevver.rabam.service.specification.ServiceSpecification;
 import lombok.RequiredArgsConstructor;
@@ -34,17 +35,23 @@ public class ServiceServiceImpl implements ServiceService {
     private final ServiceRepository serviceRepository;
     private final CarRepository carRepository;
     private final ServiceStatusTransitionValidator statusTransitionValidator;
+    private final ServiceMapper serviceMapper;
     private final DomainEventPublisher domainEventPublisher;
     private final I18nMessageService messageService;
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ServiceResponse> getAllServices(Long carId, ServiceStatus status, Pageable pageable) {
+    public Page<ServiceResponse> getAllServices(
+            Long carId,
+            ServiceStatus status,
+            Pageable pageable
+    ) {
         return serviceRepository.findAll(
-                ServiceSpecification.hasCarId(carId)
-                        .and(ServiceSpecification.hasStatus(status)),
-                pageable
-        ).map(this::mapToResponse);
+                        ServiceSpecification.hasCarId(carId)
+                                .and(ServiceSpecification.hasStatus(status)),
+                        pageable
+                )
+                .map(serviceMapper::toResponse);
     }
 
     @Override
@@ -55,7 +62,7 @@ public class ServiceServiceImpl implements ServiceService {
                         messageService.getMessage("service.not.found", id)
                 ));
 
-        return mapToResponse(service);
+        return serviceMapper.toResponse(service);
     }
 
     @Override
@@ -66,17 +73,15 @@ public class ServiceServiceImpl implements ServiceService {
                         messageService.getMessage("service.car.not.found", request.getCarId())
                 ));
 
-        Service service = new Service();
-        service.setTitle(request.getTitle());
-        service.setDescription(request.getDescription());
-        service.setStatus(ServiceStatus.PENDING);
-        service.setCar(car);
+        Service service = serviceMapper.toEntity(request, car);
 
         Service savedService = serviceRepository.save(service);
 
-        domainEventPublisher.publish(buildServiceEvent(DomainEventType.SERVICE_CREATED, savedService));
+        domainEventPublisher.publish(
+                buildServiceEvent(DomainEventType.SERVICE_CREATED, savedService)
+        );
 
-        return mapToResponse(savedService);
+        return serviceMapper.toResponse(savedService);
     }
 
     @Override
@@ -99,23 +104,17 @@ public class ServiceServiceImpl implements ServiceService {
             if (request.getStatus() == ServiceStatus.IN_PROGRESS) {
                 validateMaxActiveServices(service.getCar().getId());
             }
-
-            service.setStatus(request.getStatus());
         }
 
-        if (request.getTitle() != null) {
-            service.setTitle(request.getTitle());
-        }
-
-        if (request.getDescription() != null) {
-            service.setDescription(request.getDescription());
-        }
+        serviceMapper.updateEntity(service, request);
 
         Service updatedService = serviceRepository.save(service);
 
-        domainEventPublisher.publish(buildServiceEvent(DomainEventType.SERVICE_UPDATED, updatedService));
+        domainEventPublisher.publish(
+                buildServiceEvent(DomainEventType.SERVICE_UPDATED, updatedService)
+        );
 
-        return mapToResponse(updatedService);
+        return serviceMapper.toResponse(updatedService);
     }
 
     private void validateMaxActiveServices(Long carId) {
@@ -133,24 +132,6 @@ public class ServiceServiceImpl implements ServiceService {
                     messageService.getMessage("service.max.active", MAX_ACTIVE_SERVICES_PER_CAR)
             );
         }
-    }
-
-    private ServiceResponse mapToResponse(Service service) {
-        Car car = service.getCar();
-
-        return ServiceResponse.builder()
-                .id(service.getId())
-                .title(service.getTitle())
-                .description(service.getDescription())
-                .status(service.getStatus())
-                .carId(car.getId())
-                .carLicensePlate(car.getLicensePlate())
-                .carBrand(car.getBrand())
-                .carModel(car.getModel())
-                .version(service.getVersion())
-                .createdAt(service.getCreatedAt())
-                .updatedAt(service.getUpdatedAt())
-                .build();
     }
 
     private DomainEvent buildServiceEvent(DomainEventType eventType, Service service) {

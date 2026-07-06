@@ -13,6 +13,7 @@ import com.munevver.rabam.service.dto.ServiceResponse;
 import com.munevver.rabam.service.dto.ServiceUpdateRequest;
 import com.munevver.rabam.service.entity.Service;
 import com.munevver.rabam.service.enums.ServiceStatus;
+import com.munevver.rabam.service.mapper.ServiceMapper;
 import com.munevver.rabam.service.repository.ServiceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -53,6 +55,9 @@ class ServiceServiceImplTest {
 
     @Mock
     private ServiceStatusTransitionValidator statusTransitionValidator;
+
+    @Spy
+    private ServiceMapper serviceMapper = new ServiceMapper();
 
     @Mock
     private DomainEventPublisher domainEventPublisher;
@@ -90,6 +95,7 @@ class ServiceServiceImplTest {
         assertEquals("Yağ Değişimi", response.getContent().get(0).getTitle());
         assertEquals(ServiceStatus.PENDING, response.getContent().get(0).getStatus());
         assertEquals(car.getId(), response.getContent().get(0).getCarId());
+        assertEquals(car.getLicensePlate(), response.getContent().get(0).getCarLicensePlate());
     }
 
     @Test
@@ -108,6 +114,7 @@ class ServiceServiceImplTest {
         assertEquals("Yağ Değişimi", response.getTitle());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
         assertEquals(car.getId(), response.getCarId());
+        assertEquals(car.getLicensePlate(), response.getCarLicensePlate());
     }
 
     @Test
@@ -115,13 +122,19 @@ class ServiceServiceImplTest {
         Long carId = 1L;
 
         Car car = buildCar(carId);
-        ServiceRequest request = buildServiceRequest(carId, "Yağ Değişimi", "Motor yağı değiştirilecek.");
+        ServiceRequest request = buildServiceRequest(
+                carId,
+                "Yağ Değişimi",
+                "Motor yağı değiştirilecek."
+        );
 
         when(carRepository.findById(carId)).thenReturn(Optional.of(car));
         when(serviceRepository.save(any(Service.class))).thenAnswer(invocation -> {
             Service service = invocation.getArgument(0);
             service.setId(1L);
             service.setVersion(0L);
+            service.setCreatedAt(LocalDateTime.now());
+            service.setUpdatedAt(LocalDateTime.now());
             return service;
         });
 
@@ -133,6 +146,7 @@ class ServiceServiceImplTest {
         assertEquals("Motor yağı değiştirilecek.", response.getDescription());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
         assertEquals(carId, response.getCarId());
+        assertEquals(car.getLicensePlate(), response.getCarLicensePlate());
 
         verify(serviceRepository).save(any(Service.class));
         verify(domainEventPublisher).publish(any(DomainEvent.class));
@@ -142,7 +156,11 @@ class ServiceServiceImplTest {
     void shouldThrowNotFoundExceptionWhenCarDoesNotExistOnCreate() {
         Long carId = 99L;
 
-        ServiceRequest request = buildServiceRequest(carId, "Yağ Değişimi", "Motor yağı değiştirilecek.");
+        ServiceRequest request = buildServiceRequest(
+                carId,
+                "Yağ Değişimi",
+                "Motor yağı değiştirilecek."
+        );
 
         when(carRepository.findById(carId)).thenReturn(Optional.empty());
 
