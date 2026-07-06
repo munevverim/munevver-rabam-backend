@@ -1,8 +1,10 @@
 package com.munevver.rabam.audit.service;
 
-import com.munevver.rabam.event.dto.DomainEvent;
+import com.munevver.rabam.audit.dto.AuditLogResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface AuditLogService {
 
-    void save(DomainEvent event);
+    Page<AuditLogResponse> getAuditLogs(Pageable pageable);
 }

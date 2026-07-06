@@ -4,6 +4,7 @@
     "subtitle": "Car & Service Management Panel"
   },
   "tabs": {
+    "auditLogs": "Audit Logs",
     "cars": "Cars",
     "services": "Services"
   },
@@ -48,6 +49,20 @@
       "model": "Model",
       "createdAt": "Created At",
       "actions": "Actions"
+    }
+  },
+  "auditLogs": {
+    "title": "Audit Logs",
+    "description": "Domain event records received through RabbitMQ.",
+    "refresh": "Refresh",
+    "noLogs": "No audit logs found.",
+    "table": {
+      "id": "ID",
+      "eventType": "Event Type",
+      "entityType": "Entity Type",
+      "entityId": "Entity ID",
+      "payload": "Payload",
+      "createdAt": "Created At"
     }
   },
   "services": {

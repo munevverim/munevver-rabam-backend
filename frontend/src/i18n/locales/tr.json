@@ -5,7 +5,8 @@
   },
   "tabs": {
     "cars": "Araçlar",
-    "services": "Servisler"
+    "services": "Servisler",
+    "auditLogs": "Audit Logları"
   },
   "layout": {
     "switchToDark": "Koyu temaya geç",
@@ -48,6 +49,20 @@
       "model": "Model",
       "createdAt": "Oluşturulma Tarihi",
       "actions": "İşlemler"
+    }
+  },
+  "auditLogs": {
+    "title": "Audit Logları",
+    "description": "RabbitMQ üzerinden gelen domain event kayıtları.",
+    "refresh": "Yenile",
+    "noLogs": "Audit log bulunamadı.",
+    "table": {
+      "id": "ID",
+      "eventType": "Event Tipi",
+      "entityType": "Entity Tipi",
+      "entityId": "Entity ID",
+      "payload": "Payload",
+      "createdAt": "Oluşturulma Tarihi"
     }
   },
   "services": {

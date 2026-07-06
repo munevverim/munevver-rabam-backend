@@ -1,32 +1,45 @@
 package com.munevver.rabam.audit.entity;
 
-import com.munevver.rabam.common.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
+import com.munevver.rabam.event.enums.DomainEventType;
+import com.munevver.rabam.event.enums.EntityType;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "audit_logs")
-public class AuditLog extends BaseEntity {
+@Getter
+@Setter
+public class AuditLog {
 
-    @Column(nullable = false, length = 100)
-    private String eventType;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String entityType;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private DomainEventType eventType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EntityType entityType;
 
     @Column(nullable = false)
     private Long entityId;
 
-    @Column(nullable = false)
-    private LocalDateTime eventTimestamp;
-
+    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String payload;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

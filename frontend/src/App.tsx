@@ -1,19 +1,14 @@
-import {
-  Box,
-  CssBaseline,
-  Paper,
-  Tab,
-  Tabs,
-  ThemeProvider
-} from '@mui/material';
+import { Box, CssBaseline, Paper, Tab, Tabs, ThemeProvider } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import BuildCircleIcon from '@mui/icons-material/BuildCircle';
+import HistoryIcon from '@mui/icons-material/History';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppLayout from './components/layout/AppLayout';
 import CarsPage from './pages/CarsPage';
 import ServicesPage from './pages/ServicesPage';
+import AuditLogsPage from './pages/AuditLogsPage';
 import { getAppTheme } from './theme';
 
 function App() {
@@ -35,7 +30,9 @@ function App() {
   function toggleThemeMode() {
     setMode((previousMode) => {
       const nextMode = previousMode === 'light' ? 'dark' : 'light';
+
       localStorage.setItem('themeMode', nextMode);
+
       return nextMode;
     });
   }
@@ -81,14 +78,30 @@ function App() {
               }
             })}
           >
-            <Tab icon={<DirectionsCarIcon />} iconPosition="start" label={t('tabs.cars')} />
-            <Tab icon={<BuildCircleIcon />} iconPosition="start" label={t('tabs.services')} />
+            <Tab
+              icon={<DirectionsCarIcon />}
+              iconPosition="start"
+              label={t('tabs.cars')}
+            />
+
+            <Tab
+              icon={<BuildCircleIcon />}
+              iconPosition="start"
+              label={t('tabs.services')}
+            />
+
+            <Tab
+              icon={<HistoryIcon />}
+              iconPosition="start"
+              label={t('tabs.auditLogs')}
+            />
           </Tabs>
         </Paper>
 
         <Box>
           {activeTab === 0 && <CarsPage />}
           {activeTab === 1 && <ServicesPage />}
+          {activeTab === 2 && <AuditLogsPage />}
         </Box>
       </AppLayout>
     </ThemeProvider>

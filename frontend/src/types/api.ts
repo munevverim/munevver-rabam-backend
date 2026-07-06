@@ -1,17 +1,19 @@
 export type ApiResponse<T> = {
-  success?: boolean;
-  message?: string;
+  success: boolean;
+  message: string;
   data: T;
-  timestamp?: string;
 };
 
 export type SpringPage<T> = {
   content: T[];
-  number: number;
-  size: number;
   totalElements: number;
   totalPages: number;
+  size: number;
+  number: number;
+  numberOfElements: number;
   first: boolean;
   last: boolean;
   empty: boolean;
 };
+
+export type PageResponse<T> = SpringPage<T>;
