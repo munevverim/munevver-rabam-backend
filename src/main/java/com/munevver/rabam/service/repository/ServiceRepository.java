@@ -15,6 +15,8 @@ public interface ServiceRepository extends JpaRepository<Service, Long>, JpaSpec
 
     long countByCarIdAndStatus(Long carId, ServiceStatus status);
 
+    long countByStatus(ServiceStatus status);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Service s where s.car.id = :carId and s.status = :status")
     List<Service> findByCarIdAndStatusForUpdate(

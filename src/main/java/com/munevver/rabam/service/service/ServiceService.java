@@ -9,7 +9,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface ServiceService {
 
-    Page<ServiceResponse> getAllServices(Long carId, ServiceStatus status, Pageable pageable);
+    Page<ServiceResponse> getAllServices(
+            Long carId,
+            ServiceStatus status,
+            Pageable pageable
+    );
 
     ServiceResponse getServiceById(Long id);
 

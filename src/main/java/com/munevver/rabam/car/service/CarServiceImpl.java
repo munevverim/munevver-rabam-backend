@@ -6,6 +6,7 @@ import com.munevver.rabam.car.entity.Car;
 import com.munevver.rabam.car.repository.CarRepository;
 import com.munevver.rabam.common.exception.ConflictException;
 import com.munevver.rabam.common.exception.ResourceNotFoundException;
+import com.munevver.rabam.common.i18n.I18nMessageService;
 import com.munevver.rabam.event.dto.DomainEvent;
 import com.munevver.rabam.event.enums.DomainEventType;
 import com.munevver.rabam.event.enums.EntityType;
@@ -13,20 +14,21 @@ import com.munevver.rabam.event.publisher.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Map;
 
-@Service
+@org.springframework.stereotype.Service
 @RequiredArgsConstructor
 public class CarServiceImpl implements CarService {
 
     private final CarRepository carRepository;
     private final DomainEventPublisher domainEventPublisher;
+    private final I18nMessageService messageService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<CarResponse> getAllCars(Pageable pageable) {
         return carRepository.findAll(pageable)
                 .map(this::mapToResponse);
@@ -38,7 +40,9 @@ public class CarServiceImpl implements CarService {
         String normalizedPlate = normalizePlate(request.getLicensePlate());
 
         if (carRepository.existsByLicensePlateIgnoreCase(normalizedPlate)) {
-            throw new ConflictException("License plate already exists: " + normalizedPlate);
+            throw new ConflictException(
+                    messageService.getMessage("car.license.exists", normalizedPlate)
+            );
         }
 
         Car car = new Car();
@@ -57,14 +61,18 @@ public class CarServiceImpl implements CarService {
     @Transactional
     public CarResponse updateCar(Long id, CarRequest request) {
         Car car = carRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("car.not.found", id)
+                ));
 
         String normalizedPlate = normalizePlate(request.getLicensePlate());
 
         boolean plateChanged = !car.getLicensePlate().equalsIgnoreCase(normalizedPlate);
 
         if (plateChanged && carRepository.existsByLicensePlateIgnoreCase(normalizedPlate)) {
-            throw new ConflictException("License plate already exists: " + normalizedPlate);
+            throw new ConflictException(
+                    messageService.getMessage("car.license.exists", normalizedPlate)
+            );
         }
 
         car.setLicensePlate(normalizedPlate);

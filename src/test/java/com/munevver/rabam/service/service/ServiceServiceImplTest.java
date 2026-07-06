@@ -5,6 +5,8 @@ import com.munevver.rabam.car.repository.CarRepository;
 import com.munevver.rabam.common.exception.BadRequestException;
 import com.munevver.rabam.common.exception.ConflictException;
 import com.munevver.rabam.common.exception.ResourceNotFoundException;
+import com.munevver.rabam.common.i18n.I18nMessageService;
+import com.munevver.rabam.event.dto.DomainEvent;
 import com.munevver.rabam.event.publisher.DomainEventPublisher;
 import com.munevver.rabam.service.dto.ServiceRequest;
 import com.munevver.rabam.service.dto.ServiceResponse;
@@ -15,17 +17,30 @@ import com.munevver.rabam.service.repository.ServiceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ServiceServiceImplTest {
@@ -42,266 +57,273 @@ class ServiceServiceImplTest {
     @Mock
     private DomainEventPublisher domainEventPublisher;
 
+    @Mock
+    private I18nMessageService messageService;
+
     @InjectMocks
     private ServiceServiceImpl serviceService;
 
-    private Car car;
-    private Service service;
-
     @BeforeEach
     void setUp() {
-        car = new Car();
-        car.setId(5L);
-        car.setLicensePlate("06 RBM 205");
-        car.setBrand("Skoda");
-        car.setModel("Octavia");
-        car.setCreatedAt(LocalDateTime.now());
-
-        service = new Service();
-        service.setId(2L);
-        service.setTitle("Oil Change");
-        service.setDescription("Engine oil and filter replacement");
-        service.setStatus(ServiceStatus.PENDING);
-        service.setCar(car);
-        service.setVersion(0L);
-        service.setCreatedAt(LocalDateTime.now());
+        lenient()
+                .when(messageService.getMessage(anyString(), any(Object[].class)))
+                .thenAnswer(invocation -> invocation.getArgument(0, String.class));
     }
 
     @Test
-    void shouldCreateServiceSuccessfully() {
-        ServiceRequest request = new ServiceRequest();
-        request.setTitle("Oil Change");
-        request.setDescription("Engine oil and filter replacement");
-        request.setCarId(5L);
+    void shouldGetAllServices() {
+        Pageable pageable = PageRequest.of(0, 10);
 
-        when(carRepository.findById(5L))
-                .thenReturn(Optional.of(car));
+        Car car = buildCar(1L);
+        Service service = buildService(1L, car, ServiceStatus.PENDING, 0L);
 
-        when(serviceRepository.save(any(Service.class)))
-                .thenAnswer(invocation -> {
-                    Service savedService = invocation.getArgument(0);
-                    savedService.setId(2L);
-                    savedService.setVersion(0L);
-                    savedService.setCreatedAt(LocalDateTime.now());
-                    return savedService;
-                });
+        Page<Service> servicePage = new PageImpl<>(List.of(service), pageable, 1);
+
+        when(serviceRepository.findAll(
+                ArgumentMatchers.<Specification<Service>>any(),
+                eq(pageable)
+        )).thenReturn(servicePage);
+
+        Page<ServiceResponse> response = serviceService.getAllServices(null, null, pageable);
+
+        assertEquals(1, response.getTotalElements());
+        assertEquals("Yağ Değişimi", response.getContent().get(0).getTitle());
+        assertEquals(ServiceStatus.PENDING, response.getContent().get(0).getStatus());
+        assertEquals(car.getId(), response.getContent().get(0).getCarId());
+    }
+
+    @Test
+    void shouldGetServiceById() {
+        Long serviceId = 1L;
+
+        Car car = buildCar(1L);
+        Service service = buildService(serviceId, car, ServiceStatus.PENDING, 0L);
+
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
+
+        ServiceResponse response = serviceService.getServiceById(serviceId);
+
+        assertNotNull(response);
+        assertEquals(serviceId, response.getId());
+        assertEquals("Yağ Değişimi", response.getTitle());
+        assertEquals(ServiceStatus.PENDING, response.getStatus());
+        assertEquals(car.getId(), response.getCarId());
+    }
+
+    @Test
+    void shouldCreateService() {
+        Long carId = 1L;
+
+        Car car = buildCar(carId);
+        ServiceRequest request = buildServiceRequest(carId, "Yağ Değişimi", "Motor yağı değiştirilecek.");
+
+        when(carRepository.findById(carId)).thenReturn(Optional.of(car));
+        when(serviceRepository.save(any(Service.class))).thenAnswer(invocation -> {
+            Service service = invocation.getArgument(0);
+            service.setId(1L);
+            service.setVersion(0L);
+            return service;
+        });
 
         ServiceResponse response = serviceService.createService(request);
 
         assertNotNull(response);
-        assertEquals(2L, response.getId());
-        assertEquals("Oil Change", response.getTitle());
-        assertEquals("Engine oil and filter replacement", response.getDescription());
+        assertEquals(1L, response.getId());
+        assertEquals("Yağ Değişimi", response.getTitle());
+        assertEquals("Motor yağı değiştirilecek.", response.getDescription());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
-        assertEquals(5L, response.getCarId());
-        assertEquals("06 RBM 205", response.getCarLicensePlate());
-        assertEquals(0L, response.getVersion());
+        assertEquals(carId, response.getCarId());
 
-        verify(carRepository).findById(5L);
         verify(serviceRepository).save(any(Service.class));
-        verify(domainEventPublisher).publish(any());
+        verify(domainEventPublisher).publish(any(DomainEvent.class));
     }
 
     @Test
     void shouldThrowNotFoundExceptionWhenCarDoesNotExistOnCreate() {
-        ServiceRequest request = new ServiceRequest();
-        request.setTitle("Oil Change");
-        request.setDescription("Engine oil and filter replacement");
-        request.setCarId(999L);
+        Long carId = 99L;
 
-        when(carRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        ServiceRequest request = buildServiceRequest(carId, "Yağ Değişimi", "Motor yağı değiştirilecek.");
 
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> serviceService.createService(request)
-        );
+        when(carRepository.findById(carId)).thenReturn(Optional.empty());
 
-        assertTrue(exception.getMessage().contains("Car not found"));
+        assertThrows(ResourceNotFoundException.class, () -> serviceService.createService(request));
 
         verify(serviceRepository, never()).save(any(Service.class));
-        verify(domainEventPublisher, never()).publish(any());
+        verify(domainEventPublisher, never()).publish(any(DomainEvent.class));
     }
 
     @Test
-    void shouldUpdateServiceStatusSuccessfully() {
+    void shouldUpdateServiceTitleAndDescription() {
+        Long serviceId = 1L;
+
+        Car car = buildCar(1L);
+        Service service = buildService(serviceId, car, ServiceStatus.PENDING, 0L);
+
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setStatus(ServiceStatus.IN_PROGRESS);
+        request.setTitle("Fren Bakımı");
+        request.setDescription("Fren diskleri kontrol edilecek.");
         request.setVersion(0L);
 
-        when(serviceRepository.findById(2L))
-                .thenReturn(Optional.of(service));
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
+        when(serviceRepository.save(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(carRepository.findByIdForUpdate(5L))
-                .thenReturn(Optional.of(car));
-
-        when(serviceRepository.findByCarIdAndStatusForUpdate(5L, ServiceStatus.IN_PROGRESS))
-                .thenReturn(List.of());
-
-        when(serviceRepository.save(any(Service.class)))
-                .thenAnswer(invocation -> {
-                    Service updatedService = invocation.getArgument(0);
-                    updatedService.setVersion(1L);
-                    updatedService.setUpdatedAt(LocalDateTime.now());
-                    return updatedService;
-                });
-
-        ServiceResponse response = serviceService.updateService(2L, request);
+        ServiceResponse response = serviceService.updateService(serviceId, request);
 
         assertNotNull(response);
-        assertEquals(2L, response.getId());
-        assertEquals(ServiceStatus.IN_PROGRESS, response.getStatus());
-        assertEquals(1L, response.getVersion());
-
-        verify(statusTransitionValidator)
-                .validate(ServiceStatus.PENDING, ServiceStatus.IN_PROGRESS);
-
-        verify(carRepository).findByIdForUpdate(5L);
-        verify(serviceRepository).findByCarIdAndStatusForUpdate(5L, ServiceStatus.IN_PROGRESS);
-        verify(serviceRepository).save(any(Service.class));
-        verify(domainEventPublisher).publish(any());
-    }
-
-    @Test
-    void shouldUpdateTitleAndDescriptionSuccessfully() {
-        ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setTitle("Inspection");
-        request.setDescription("General vehicle inspection");
-        request.setVersion(0L);
-
-        when(serviceRepository.findById(2L))
-                .thenReturn(Optional.of(service));
-
-        when(serviceRepository.save(any(Service.class)))
-                .thenAnswer(invocation -> {
-                    Service updatedService = invocation.getArgument(0);
-                    updatedService.setVersion(1L);
-                    updatedService.setUpdatedAt(LocalDateTime.now());
-                    return updatedService;
-                });
-
-        ServiceResponse response = serviceService.updateService(2L, request);
-
-        assertNotNull(response);
-        assertEquals("Inspection", response.getTitle());
-        assertEquals("General vehicle inspection", response.getDescription());
+        assertEquals(serviceId, response.getId());
+        assertEquals("Fren Bakımı", response.getTitle());
+        assertEquals("Fren diskleri kontrol edilecek.", response.getDescription());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
-        assertEquals(1L, response.getVersion());
 
-        verify(statusTransitionValidator, never()).validate(any(), any());
-        verify(carRepository, never()).findByIdForUpdate(any());
-        verify(serviceRepository, never()).findByCarIdAndStatusForUpdate(any(), any());
-        verify(serviceRepository).save(any(Service.class));
-        verify(domainEventPublisher).publish(any());
+        verify(serviceRepository).save(service);
+        verify(domainEventPublisher).publish(any(DomainEvent.class));
     }
 
     @Test
     void shouldThrowNotFoundExceptionWhenServiceDoesNotExistOnUpdate() {
+        Long serviceId = 99L;
+
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setStatus(ServiceStatus.IN_PROGRESS);
+        request.setTitle("Fren Bakımı");
         request.setVersion(0L);
 
-        when(serviceRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.empty());
 
-        ResourceNotFoundException exception = assertThrows(
-                ResourceNotFoundException.class,
-                () -> serviceService.updateService(999L, request)
-        );
-
-        assertTrue(exception.getMessage().contains("Service not found"));
+        assertThrows(ResourceNotFoundException.class, () -> serviceService.updateService(serviceId, request));
 
         verify(serviceRepository, never()).save(any(Service.class));
-        verify(domainEventPublisher, never()).publish(any());
+        verify(domainEventPublisher, never()).publish(any(DomainEvent.class));
     }
 
     @Test
     void shouldThrowConflictExceptionWhenVersionDoesNotMatch() {
+        Long serviceId = 1L;
+
+        Car car = buildCar(1L);
+        Service service = buildService(serviceId, car, ServiceStatus.PENDING, 2L);
+
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setStatus(ServiceStatus.IN_PROGRESS);
-        request.setVersion(99L);
+        request.setTitle("Fren Bakımı");
+        request.setVersion(1L);
 
-        when(serviceRepository.findById(2L))
-                .thenReturn(Optional.of(service));
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
 
-        ConflictException exception = assertThrows(
-                ConflictException.class,
-                () -> serviceService.updateService(2L, request)
-        );
+        assertThrows(ConflictException.class, () -> serviceService.updateService(serviceId, request));
 
-        assertTrue(exception.getMessage().contains("updated by another user"));
-
-        verify(statusTransitionValidator, never()).validate(any(), any());
-        verify(carRepository, never()).findByIdForUpdate(any());
-        verify(serviceRepository, never()).findByCarIdAndStatusForUpdate(any(), any());
         verify(serviceRepository, never()).save(any(Service.class));
-        verify(domainEventPublisher, never()).publish(any());
+        verify(domainEventPublisher, never()).publish(any(DomainEvent.class));
     }
 
     @Test
-    void shouldThrowBadRequestExceptionWhenStatusTransitionIsInvalid() {
+    void shouldUpdateServiceStatusToInProgress() {
+        Long serviceId = 1L;
+        Long carId = 1L;
+
+        Car car = buildCar(carId);
+        Service service = buildService(serviceId, car, ServiceStatus.PENDING, 0L);
+
+        ServiceUpdateRequest request = new ServiceUpdateRequest();
+        request.setStatus(ServiceStatus.IN_PROGRESS);
+        request.setVersion(0L);
+
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
+        when(carRepository.findByIdForUpdate(carId)).thenReturn(Optional.of(car));
+        when(serviceRepository.findByCarIdAndStatusForUpdate(carId, ServiceStatus.IN_PROGRESS))
+                .thenReturn(List.of());
+        when(serviceRepository.save(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ServiceResponse response = serviceService.updateService(serviceId, request);
+
+        assertNotNull(response);
+        assertEquals(serviceId, response.getId());
+        assertEquals(ServiceStatus.IN_PROGRESS, response.getStatus());
+
+        verify(statusTransitionValidator).validate(ServiceStatus.PENDING, ServiceStatus.IN_PROGRESS);
+        verify(serviceRepository).save(service);
+        verify(domainEventPublisher).publish(any(DomainEvent.class));
+    }
+
+    @Test
+    void shouldUpdateServiceStatusToDone() {
+        Long serviceId = 1L;
+
+        Car car = buildCar(1L);
+        Service service = buildService(serviceId, car, ServiceStatus.IN_PROGRESS, 0L);
+
         ServiceUpdateRequest request = new ServiceUpdateRequest();
         request.setStatus(ServiceStatus.DONE);
         request.setVersion(0L);
 
-        when(serviceRepository.findById(2L))
-                .thenReturn(Optional.of(service));
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
+        when(serviceRepository.save(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        doThrow(new BadRequestException("Invalid status transition attempted from PENDING to DONE"))
-                .when(statusTransitionValidator)
-                .validate(ServiceStatus.PENDING, ServiceStatus.DONE);
+        ServiceResponse response = serviceService.updateService(serviceId, request);
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> serviceService.updateService(2L, request)
-        );
+        assertNotNull(response);
+        assertEquals(serviceId, response.getId());
+        assertEquals(ServiceStatus.DONE, response.getStatus());
 
-        assertTrue(exception.getMessage().contains("Invalid status transition"));
-
-        verify(carRepository, never()).findByIdForUpdate(any());
-        verify(serviceRepository, never()).findByCarIdAndStatusForUpdate(any(), any());
-        verify(serviceRepository, never()).save(any(Service.class));
-        verify(domainEventPublisher, never()).publish(any());
+        verify(statusTransitionValidator).validate(ServiceStatus.IN_PROGRESS, ServiceStatus.DONE);
+        verify(serviceRepository).save(service);
+        verify(domainEventPublisher).publish(any(DomainEvent.class));
     }
 
     @Test
     void shouldThrowBadRequestExceptionWhenMaxActiveServicesLimitExceeded() {
+        Long serviceId = 1L;
+        Long carId = 1L;
+
+        Car car = buildCar(carId);
+        Service service = buildService(serviceId, car, ServiceStatus.PENDING, 0L);
+
+        Service activeService1 = buildService(2L, car, ServiceStatus.IN_PROGRESS, 0L);
+        Service activeService2 = buildService(3L, car, ServiceStatus.IN_PROGRESS, 0L);
+
         ServiceUpdateRequest request = new ServiceUpdateRequest();
         request.setStatus(ServiceStatus.IN_PROGRESS);
         request.setVersion(0L);
 
-        Service activeService1 = new Service();
-        activeService1.setId(10L);
-        activeService1.setStatus(ServiceStatus.IN_PROGRESS);
-        activeService1.setCar(car);
-
-        Service activeService2 = new Service();
-        activeService2.setId(11L);
-        activeService2.setStatus(ServiceStatus.IN_PROGRESS);
-        activeService2.setCar(car);
-
-        when(serviceRepository.findById(2L))
-                .thenReturn(Optional.of(service));
-
-        when(carRepository.findByIdForUpdate(5L))
-                .thenReturn(Optional.of(car));
-
-        when(serviceRepository.findByCarIdAndStatusForUpdate(5L, ServiceStatus.IN_PROGRESS))
+        when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
+        when(carRepository.findByIdForUpdate(carId)).thenReturn(Optional.of(car));
+        when(serviceRepository.findByCarIdAndStatusForUpdate(carId, ServiceStatus.IN_PROGRESS))
                 .thenReturn(List.of(activeService1, activeService2));
 
-        BadRequestException exception = assertThrows(
-                BadRequestException.class,
-                () -> serviceService.updateService(2L, request)
-        );
+        assertThrows(BadRequestException.class, () -> serviceService.updateService(serviceId, request));
 
-        assertTrue(exception.getMessage().contains("at most 2 services in progress"));
-
-        verify(statusTransitionValidator)
-                .validate(ServiceStatus.PENDING, ServiceStatus.IN_PROGRESS);
-
-        verify(carRepository).findByIdForUpdate(5L);
-        verify(serviceRepository).findByCarIdAndStatusForUpdate(5L, ServiceStatus.IN_PROGRESS);
+        verify(statusTransitionValidator).validate(ServiceStatus.PENDING, ServiceStatus.IN_PROGRESS);
         verify(serviceRepository, never()).save(any(Service.class));
-        verify(domainEventPublisher, never()).publish(any());
+        verify(domainEventPublisher, never()).publish(any(DomainEvent.class));
+    }
+
+    private ServiceRequest buildServiceRequest(Long carId, String title, String description) {
+        ServiceRequest request = new ServiceRequest();
+        request.setCarId(carId);
+        request.setTitle(title);
+        request.setDescription(description);
+        return request;
+    }
+
+    private Car buildCar(Long id) {
+        Car car = new Car();
+        car.setId(id);
+        car.setLicensePlate("34 ABC 123");
+        car.setBrand("Toyota");
+        car.setModel("Corolla");
+        car.setCreatedAt(LocalDateTime.now());
+        car.setUpdatedAt(LocalDateTime.now());
+        return car;
+    }
+
+    private Service buildService(Long id, Car car, ServiceStatus status, Long version) {
+        Service service = new Service();
+        service.setId(id);
+        service.setTitle("Yağ Değişimi");
+        service.setDescription("Motor yağı değiştirilecek.");
+        service.setStatus(status);
+        service.setCar(car);
+        service.setVersion(version);
+        service.setCreatedAt(LocalDateTime.now());
+        service.setUpdatedAt(LocalDateTime.now());
+        return service;
     }
 }

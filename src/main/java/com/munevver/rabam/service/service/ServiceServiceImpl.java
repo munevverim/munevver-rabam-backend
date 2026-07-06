@@ -5,6 +5,7 @@ import com.munevver.rabam.car.repository.CarRepository;
 import com.munevver.rabam.common.exception.BadRequestException;
 import com.munevver.rabam.common.exception.ConflictException;
 import com.munevver.rabam.common.exception.ResourceNotFoundException;
+import com.munevver.rabam.common.i18n.I18nMessageService;
 import com.munevver.rabam.event.dto.DomainEvent;
 import com.munevver.rabam.event.enums.DomainEventType;
 import com.munevver.rabam.event.enums.EntityType;
@@ -34,8 +35,10 @@ public class ServiceServiceImpl implements ServiceService {
     private final CarRepository carRepository;
     private final ServiceStatusTransitionValidator statusTransitionValidator;
     private final DomainEventPublisher domainEventPublisher;
+    private final I18nMessageService messageService;
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ServiceResponse> getAllServices(Long carId, ServiceStatus status, Pageable pageable) {
         return serviceRepository.findAll(
                 ServiceSpecification.hasCarId(carId)
@@ -45,9 +48,12 @@ public class ServiceServiceImpl implements ServiceService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ServiceResponse getServiceById(Long id) {
         Service service = serviceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Service not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("service.not.found", id)
+                ));
 
         return mapToResponse(service);
     }
@@ -56,7 +62,9 @@ public class ServiceServiceImpl implements ServiceService {
     @Transactional
     public ServiceResponse createService(ServiceRequest request) {
         Car car = carRepository.findById(request.getCarId())
-                .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + request.getCarId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("service.car.not.found", request.getCarId())
+                ));
 
         Service service = new Service();
         service.setTitle(request.getTitle());
@@ -75,10 +83,14 @@ public class ServiceServiceImpl implements ServiceService {
     @Transactional
     public ServiceResponse updateService(Long id, ServiceUpdateRequest request) {
         Service service = serviceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Service not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("service.not.found", id)
+                ));
 
         if (request.getVersion() != null && !request.getVersion().equals(service.getVersion())) {
-            throw new ConflictException("Service was updated by another user. Please refresh and try again.");
+            throw new ConflictException(
+                    messageService.getMessage("service.version.conflict")
+            );
         }
 
         if (request.getStatus() != null) {
@@ -108,7 +120,9 @@ public class ServiceServiceImpl implements ServiceService {
 
     private void validateMaxActiveServices(Long carId) {
         carRepository.findByIdForUpdate(carId)
-                .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + carId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        messageService.getMessage("service.car.not.found", carId)
+                ));
 
         int activeCount = serviceRepository
                 .findByCarIdAndStatusForUpdate(carId, ServiceStatus.IN_PROGRESS)
@@ -116,8 +130,7 @@ public class ServiceServiceImpl implements ServiceService {
 
         if (activeCount >= MAX_ACTIVE_SERVICES_PER_CAR) {
             throw new BadRequestException(
-                    "A car can have at most " + MAX_ACTIVE_SERVICES_PER_CAR +
-                            " services in progress at the same time."
+                    messageService.getMessage("service.max.active", MAX_ACTIVE_SERVICES_PER_CAR)
             );
         }
     }
