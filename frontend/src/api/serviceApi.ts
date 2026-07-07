@@ -30,6 +30,11 @@ export async function getServices(
   return response.data.data;
 }
 
+export async function getService(id: number) {
+  const response = await apiClient.get<ApiResponse<ServiceResponse>>(`/services/${id}`);
+  return response.data.data;
+}
+
 export async function createService(request: ServiceRequest) {
   const response = await apiClient.post<ApiResponse<ServiceResponse>>('/services', request);
   return response.data.data;

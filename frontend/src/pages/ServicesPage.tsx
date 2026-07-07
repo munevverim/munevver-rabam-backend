@@ -8,7 +8,12 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Paper,
@@ -25,6 +30,7 @@ import {
   Typography
 } from '@mui/material';
 import BuildCircleIcon from '@mui/icons-material/BuildCircle';
+import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
@@ -35,6 +41,7 @@ import { getCars } from '../api/carApi';
 import { getDashboardSummary } from '../api/dashboardApi';
 import {
   createService,
+  getService,
   getServices,
   updateService
 } from '../api/serviceApi';
@@ -83,6 +90,9 @@ function ServicesPage() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [updatingServiceId, setUpdatingServiceId] = useState<number | null>(null);
+  const [editingService, setEditingService] = useState<ServiceResponse | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -93,8 +103,20 @@ function ServicesPage() {
       setErrorMessage('');
 
       const result = await getCars(0, 100);
+      const requestedCarId = Number(new URLSearchParams(window.location.search).get('carId'));
 
       setCars(result.content);
+
+      if (requestedCarId) {
+        const requestedCar = result.content.find((car) => car.id === requestedCarId) || null;
+
+        if (requestedCar) {
+          setSelectedCar(requestedCar);
+          setFilterCar(requestedCar);
+          setAppliedFilterCar(requestedCar);
+          setPage(0);
+        }
+      }
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -138,6 +160,26 @@ function ServicesPage() {
   async function refreshPageData() {
     await loadServices();
     await loadSummary();
+  }
+
+  async function refreshServiceRow(serviceId: number) {
+    try {
+      const refreshedService = await getService(serviceId);
+
+      setServices((currentServices) =>
+        currentServices.map((service) =>
+          service.id === serviceId ? refreshedService : service
+        )
+      );
+
+      if (editingService?.id === serviceId) {
+        setEditingService(refreshedService);
+        setEditTitle(refreshedService.title);
+        setEditDescription(refreshedService.description || '');
+      }
+    } catch {
+      await loadServices();
+    }
   }
 
   useEffect(() => {
@@ -198,6 +240,54 @@ function ServicesPage() {
       await loadSummary();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
+      if (isConflictError(error)) {
+        await refreshServiceRow(service.id);
+      }
+    } finally {
+      setUpdatingServiceId(null);
+    }
+  }
+
+  function handleOpenEditDialog(service: ServiceResponse) {
+    setEditingService(service);
+    setEditTitle(service.title);
+    setEditDescription(service.description || '');
+    setErrorMessage('');
+    setSuccessMessage('');
+  }
+
+  function handleCloseEditDialog() {
+    setEditingService(null);
+    setEditTitle('');
+    setEditDescription('');
+  }
+
+  async function handleUpdateServiceDetails() {
+    if (!editingService) {
+      return;
+    }
+
+    try {
+      setUpdatingServiceId(editingService.id);
+      setErrorMessage('');
+      setSuccessMessage('');
+
+      await updateService(editingService.id, {
+        title: editTitle,
+        description: editDescription,
+        version: editingService.version
+      });
+
+      setSuccessMessage(t('services.updated'));
+      handleCloseEditDialog();
+
+      await loadServices();
+      await loadSummary();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+      if (isConflictError(error)) {
+        await refreshServiceRow(editingService.id);
+      }
     } finally {
       setUpdatingServiceId(null);
     }
@@ -207,6 +297,15 @@ function ServicesPage() {
     setAppliedFilterCar(filterCar);
     setAppliedFilterStatus(filterStatus);
     setPage(0);
+
+    const searchParams = new URLSearchParams();
+    searchParams.set('tab', 'services');
+
+    if (filterCar) {
+      searchParams.set('carId', String(filterCar.id));
+    }
+
+    window.history.pushState(null, '', `?${searchParams.toString()}`);
   }
 
   function handleClearFilters() {
@@ -215,6 +314,10 @@ function ServicesPage() {
     setAppliedFilterCar(null);
     setAppliedFilterStatus('');
     setPage(0);
+
+    const searchParams = new URLSearchParams();
+    searchParams.set('tab', 'services');
+    window.history.pushState(null, '', `?${searchParams.toString()}`);
   }
 
   function resetCreateForm() {
@@ -225,6 +328,10 @@ function ServicesPage() {
 
   function isCreateFormValid() {
     return title.trim() !== '' && selectedCar !== null;
+  }
+
+  function isEditFormValid() {
+    return editTitle.trim() !== '';
   }
 
   function getNextStatuses(status: ServiceStatus): ServiceStatus[] {
@@ -260,7 +367,11 @@ function ServicesPage() {
   }
 
   function getCarOptionLabel(car: CarResponse) {
-    return `${car.licensePlate} — ${car.brand} ${car.model}`;
+    return `${car.licensePlate} - ${car.brand} ${car.model}`;
+  }
+
+  function isConflictError(error: unknown) {
+    return axios.isAxiosError(error) && error.response?.status === 409;
   }
 
   function getErrorMessage(error: unknown) {
@@ -562,6 +673,22 @@ function ServicesPage() {
 
           <Divider sx={{ mb: 2 }} />
 
+          {appliedFilterCar && (
+            <Alert
+              severity="info"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" onClick={handleClearFilters}>
+                  {t('services.clear')}
+                </Button>
+              }
+            >
+              {t('services.showingCarServices', {
+                car: getCarOptionLabel(appliedFilterCar)
+              })}
+            </Alert>
+          )}
+
           <Box
             sx={{
               display: 'grid',
@@ -643,7 +770,7 @@ function ServicesPage() {
                       <TableCell>{t('services.table.status')}</TableCell>
                       <TableCell>{t('services.table.version')}</TableCell>
                       <TableCell>{t('services.table.createdAt')}</TableCell>
-                      <TableCell align="right">{t('services.table.nextStatus')}</TableCell>
+                      <TableCell align="right">{t('services.table.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
 
@@ -706,33 +833,53 @@ function ServicesPage() {
                             <TableCell>{formatDate(service.createdAt)}</TableCell>
 
                             <TableCell align="right">
-                              {nextStatuses.length === 0 ? (
-                                <Chip
-                                  label={t('services.completed')}
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{ justifyContent: 'flex-end' }}
+                              >
+                                <IconButton
                                   size="small"
-                                  color="success"
-                                />
-                              ) : (
-                                <Stack
-                                  direction="row"
-                                  spacing={1}
-                                  sx={{ justifyContent: 'flex-end' }}
+                                  color="primary"
+                                  onClick={() => handleOpenEditDialog(service)}
                                 >
-                                  {nextStatuses.map((nextStatus) => (
-                                    <Button
-                                      key={nextStatus}
-                                      size="small"
-                                      variant="outlined"
-                                      disabled={updatingServiceId === service.id}
-                                      onClick={() => handleStatusChange(service, nextStatus)}
-                                    >
-                                      {updatingServiceId === service.id
-                                        ? t('common.updating')
-                                        : nextStatus}
-                                    </Button>
-                                  ))}
-                                </Stack>
-                              )}
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+
+                                <FormControl size="small" sx={{ minWidth: 210 }}>
+                                  <InputLabel shrink>
+                                    {t('services.table.nextStatus')}
+                                  </InputLabel>
+                                  <Select
+                                    label={t('services.table.nextStatus')}
+                                    value={nextStatuses.length === 0 ? 'COMPLETED' : ''}
+                                    disabled={
+                                      nextStatuses.length === 0 ||
+                                      updatingServiceId === service.id
+                                    }
+                                    displayEmpty
+                                    notched
+                                    onChange={(event) =>
+                                      handleStatusChange(
+                                        service,
+                                        event.target.value as ServiceStatus
+                                      )
+                                    }
+                                  >
+                                    {nextStatuses.length === 0 ? (
+                                      <MenuItem value="COMPLETED" disabled>
+                                        {t('services.completed')}
+                                      </MenuItem>
+                                    ) : (
+                                      nextStatuses.map((nextStatus) => (
+                                        <MenuItem key={nextStatus} value={nextStatus}>
+                                          {nextStatus}
+                                        </MenuItem>
+                                      ))
+                                    )}
+                                  </Select>
+                                </FormControl>
+                              </Stack>
                             </TableCell>
                           </TableRow>
                         );
@@ -758,6 +905,56 @@ function ServicesPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={editingService !== null}
+        onClose={handleCloseEditDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>{t('services.editTitle')}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel>{t('services.title')}</InputLabel>
+              <Select
+                label={t('services.title')}
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
+              >
+                {SERVICE_TITLE_OPTIONS.map((serviceTitle) => (
+                  <MenuItem key={serviceTitle} value={serviceTitle}>
+                    {serviceTitle}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label={t('services.description')}
+              value={editDescription}
+              onChange={(event) => setEditDescription(event.target.value)}
+              fullWidth
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateServiceDetails}
+            disabled={!isEditFormValid() || updatingServiceId === editingService?.id}
+          >
+            {updatingServiceId === editingService?.id
+              ? t('common.saving')
+              : t('services.saveChanges')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

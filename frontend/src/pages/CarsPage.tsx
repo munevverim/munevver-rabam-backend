@@ -22,6 +22,7 @@ import {
   Typography
 } from '@mui/material';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SaveIcon from '@mui/icons-material/Save';
@@ -36,7 +37,11 @@ import type { DashboardSummaryResponse } from '../types/dashboard';
 import { createCar, getCars, updateCar } from '../api/carApi';
 import { getDashboardSummary } from '../api/dashboardApi';
 
-function CarsPage() {
+type CarsPageProps = {
+  onViewServices: (carId: number) => void;
+};
+
+function CarsPage({ onViewServices }: CarsPageProps) {
   const { t } = useTranslation();
 
   const [cars, setCars] = useState<CarResponse[]>([]);
@@ -517,12 +522,27 @@ function CarsPage() {
                           <TableCell>{formatDate(car.createdAt)}</TableCell>
 
                           <TableCell align="right">
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleEdit(car)}
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{ justifyContent: 'flex-end' }}
                             >
-                              <EditIcon />
-                            </IconButton>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<BuildCircleIcon />}
+                                onClick={() => onViewServices(car.id)}
+                              >
+                                {t('cars.viewServices')}
+                              </Button>
+
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleEdit(car)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       ))
@@ -547,6 +567,7 @@ function CarsPage() {
           )}
         </CardContent>
       </Card>
+
     </Stack>
   );
 }

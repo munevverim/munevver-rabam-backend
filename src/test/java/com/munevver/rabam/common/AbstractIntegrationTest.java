@@ -19,7 +19,8 @@ public abstract class AbstractIntegrationTest {
 
     static final RabbitMQContainer RABBITMQ_CONTAINER =
             new RabbitMQContainer("rabbitmq:3-management")
-                    .withUser("rabam", "rabam");
+                    .withUser("rabam", "rabam")
+                    .withPermission("/", "rabam", ".*", ".*", ".*");
 
     static {
         MYSQL_CONTAINER.start();

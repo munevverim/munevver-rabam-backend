@@ -11,8 +11,35 @@ import ServicesPage from './pages/ServicesPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import { getAppTheme } from './theme';
 
+function getInitialTab() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const tab = searchParams.get('tab');
+
+  if (tab === 'services' || searchParams.has('carId')) {
+    return 1;
+  }
+
+  if (tab === 'auditLogs') {
+    return 2;
+  }
+
+  return 0;
+}
+
+function getTabName(tabIndex: number) {
+  if (tabIndex === 1) {
+    return 'services';
+  }
+
+  if (tabIndex === 2) {
+    return 'auditLogs';
+  }
+
+  return 'cars';
+}
+
 function App() {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<PaletteMode>(() => {
@@ -37,6 +64,24 @@ function App() {
     });
   }
 
+  function handleTabChange(tabIndex: number) {
+    setActiveTab(tabIndex);
+
+    const searchParams = new URLSearchParams();
+    searchParams.set('tab', getTabName(tabIndex));
+
+    window.history.pushState(null, '', `?${searchParams.toString()}`);
+  }
+
+  function handleViewCarServices(carId: number) {
+    const searchParams = new URLSearchParams();
+    searchParams.set('tab', 'services');
+    searchParams.set('carId', String(carId));
+
+    window.history.pushState(null, '', `?${searchParams.toString()}`);
+    setActiveTab(1);
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -59,7 +104,7 @@ function App() {
         >
           <Tabs
             value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
+            onChange={(_, newValue) => handleTabChange(newValue)}
             variant="fullWidth"
             sx={(theme) => ({
               '& .MuiTab-root': {
@@ -99,7 +144,7 @@ function App() {
         </Paper>
 
         <Box>
-          {activeTab === 0 && <CarsPage />}
+          {activeTab === 0 && <CarsPage onViewServices={handleViewCarServices} />}
           {activeTab === 1 && <ServicesPage />}
           {activeTab === 2 && <AuditLogsPage />}
         </Box>

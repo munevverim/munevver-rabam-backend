@@ -4,16 +4,16 @@ services:
     container_name: rabam-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: rabam_db
-      MYSQL_USER: rabam_user
-      MYSQL_PASSWORD: rabam_pass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-rabam_db}
+      MYSQL_USER: ${MYSQL_USER:-rabam_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rabam_pass}
     ports:
-      - "3333:3306"
+      - "${MYSQL_PORT:-3333}:3306"
     volumes:
       - rabam_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,11 +23,11 @@ services:
     container_name: rabam-rabbitmq
     restart: always
     ports:
-      - "5683:5672"
-      - "15683:15672"
+      - "${RABBITMQ_PORT:-5683}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15683}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: rabam
-      RABBITMQ_DEFAULT_PASS: rabam
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-rabam}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-rabam}
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -41,25 +41,41 @@ services:
     container_name: rabam-backend
     restart: always
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-rabam_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-rabam_user}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-rabam_pass}
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-rabam}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-rabam}
     depends_on:
       mysql:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ': > /dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api}
     container_name: rabam-frontend
     restart: always
     ports:
-      - "5173:80"
+      - "${FRONTEND_PORT:-5173}:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
 
 volumes:
   rabam_mysql_data:
