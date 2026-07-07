@@ -38,6 +38,14 @@ public class AuditEventConsumer {
             );
         } catch (JsonProcessingException exception) {
             log.error("Audit event payload could not be serialized.", exception);
+        } catch (Exception exception) {
+            log.error(
+                    "Audit event could not be saved. eventType={}, entityType={}, entityId={}",
+                    event.getEventType(),
+                    event.getEntityType(),
+                    event.getEntityId(),
+                    exception
+            );
         }
     }
 }

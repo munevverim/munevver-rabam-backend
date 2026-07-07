@@ -1,13 +1,11 @@
 package com.munevver.rabam;
 
+import com.munevver.rabam.common.AbstractIntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class RabamApplicationTests {
+class RabamApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
 	}
-
 }

@@ -19,21 +19,21 @@ public class AuditLog {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "event_type", nullable = false)
     private DomainEventType eventType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "entity_type", nullable = false)
     private EntityType entityType;
 
-    @Column(nullable = false)
+    @Column(name = "entity_id", nullable = false)
     private Long entityId;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
     private String payload;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
