@@ -46,6 +46,17 @@ import type {
   ServiceStatus
 } from '../types/service';
 
+const SERVICE_TITLE_OPTIONS = [
+  'Bakım',
+  'Muayene',
+  'Araç Yıkama',
+  'Lastik',
+  'Akaryakıt',
+  'Ekspertiz',
+  'Çekici',
+  'Sigorta'
+];
+
 function ServicesPage() {
   const { t } = useTranslation();
 
@@ -335,13 +346,23 @@ function ServicesPage() {
                 </Alert>
               )}
 
-              <TextField
-                label={t('services.title')}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder={t('services.titlePlaceholder')}
-                fullWidth
-              />
+              <FormControl fullWidth>
+                <InputLabel>{t('services.title')}</InputLabel>
+                <Select
+                  label={t('services.title')}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                >
+                  <MenuItem value="" disabled>
+                    {t('services.titlePlaceholder')}
+                  </MenuItem>
+                  {SERVICE_TITLE_OPTIONS.map((serviceTitle) => (
+                    <MenuItem key={serviceTitle} value={serviceTitle}>
+                      {serviceTitle}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <TextField
                 label={t('services.description')}

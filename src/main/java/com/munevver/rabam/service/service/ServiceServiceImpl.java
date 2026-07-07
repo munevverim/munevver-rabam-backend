@@ -68,6 +68,8 @@ public class ServiceServiceImpl implements ServiceService {
     @Override
     @Transactional
     public ServiceResponse createService(ServiceRequest request) {
+        validateServiceTitle(request.getTitle());
+
         Car car = carRepository.findById(request.getCarId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         messageService.getMessage("service.car.not.found", request.getCarId())
@@ -92,6 +94,10 @@ public class ServiceServiceImpl implements ServiceService {
                         messageService.getMessage("service.not.found", id)
                 ));
 
+        if (request.getTitle() != null) {
+            validateServiceTitle(request.getTitle());
+        }
+
         if (request.getVersion() != null && !request.getVersion().equals(service.getVersion())) {
             throw new ConflictException(
                     messageService.getMessage("service.version.conflict")
@@ -115,6 +121,14 @@ public class ServiceServiceImpl implements ServiceService {
         );
 
         return serviceMapper.toResponse(updatedService);
+    }
+
+    private void validateServiceTitle(String title) {
+        if (!ServiceCatalog.isAllowedTitle(title)) {
+            throw new BadRequestException(
+                    "Invalid service title. Allowed values: " + ServiceCatalog.allowedTitlesText()
+            );
+        }
     }
 
     private void validateMaxActiveServices(Long carId) {

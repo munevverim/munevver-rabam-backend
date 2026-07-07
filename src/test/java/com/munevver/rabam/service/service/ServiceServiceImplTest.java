@@ -92,7 +92,7 @@ class ServiceServiceImplTest {
         Page<ServiceResponse> response = serviceService.getAllServices(null, null, pageable);
 
         assertEquals(1, response.getTotalElements());
-        assertEquals("Yağ Değişimi", response.getContent().get(0).getTitle());
+        assertEquals("Bakım", response.getContent().get(0).getTitle());
         assertEquals(ServiceStatus.PENDING, response.getContent().get(0).getStatus());
         assertEquals(car.getId(), response.getContent().get(0).getCarId());
         assertEquals(car.getLicensePlate(), response.getContent().get(0).getCarLicensePlate());
@@ -111,7 +111,7 @@ class ServiceServiceImplTest {
 
         assertNotNull(response);
         assertEquals(serviceId, response.getId());
-        assertEquals("Yağ Değişimi", response.getTitle());
+        assertEquals("Bakım", response.getTitle());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
         assertEquals(car.getId(), response.getCarId());
         assertEquals(car.getLicensePlate(), response.getCarLicensePlate());
@@ -124,7 +124,7 @@ class ServiceServiceImplTest {
         Car car = buildCar(carId);
         ServiceRequest request = buildServiceRequest(
                 carId,
-                "Yağ Değişimi",
+                "Bakım",
                 "Motor yağı değiştirilecek."
         );
 
@@ -142,7 +142,7 @@ class ServiceServiceImplTest {
 
         assertNotNull(response);
         assertEquals(1L, response.getId());
-        assertEquals("Yağ Değişimi", response.getTitle());
+        assertEquals("Bakım", response.getTitle());
         assertEquals("Motor yağı değiştirilecek.", response.getDescription());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
         assertEquals(carId, response.getCarId());
@@ -158,7 +158,7 @@ class ServiceServiceImplTest {
 
         ServiceRequest request = buildServiceRequest(
                 carId,
-                "Yağ Değişimi",
+                "Bakım",
                 "Motor yağı değiştirilecek."
         );
 
@@ -178,7 +178,7 @@ class ServiceServiceImplTest {
         Service service = buildService(serviceId, car, ServiceStatus.PENDING, 0L);
 
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setTitle("Fren Bakımı");
+        request.setTitle("Lastik");
         request.setDescription("Fren diskleri kontrol edilecek.");
         request.setVersion(0L);
 
@@ -189,7 +189,7 @@ class ServiceServiceImplTest {
 
         assertNotNull(response);
         assertEquals(serviceId, response.getId());
-        assertEquals("Fren Bakımı", response.getTitle());
+        assertEquals("Lastik", response.getTitle());
         assertEquals("Fren diskleri kontrol edilecek.", response.getDescription());
         assertEquals(ServiceStatus.PENDING, response.getStatus());
 
@@ -202,7 +202,7 @@ class ServiceServiceImplTest {
         Long serviceId = 99L;
 
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setTitle("Fren Bakımı");
+        request.setTitle("Lastik");
         request.setVersion(0L);
 
         when(serviceRepository.findById(serviceId)).thenReturn(Optional.empty());
@@ -221,7 +221,7 @@ class ServiceServiceImplTest {
         Service service = buildService(serviceId, car, ServiceStatus.PENDING, 2L);
 
         ServiceUpdateRequest request = new ServiceUpdateRequest();
-        request.setTitle("Fren Bakımı");
+        request.setTitle("Lastik");
         request.setVersion(1L);
 
         when(serviceRepository.findById(serviceId)).thenReturn(Optional.of(service));
@@ -335,7 +335,7 @@ class ServiceServiceImplTest {
     private Service buildService(Long id, Car car, ServiceStatus status, Long version) {
         Service service = new Service();
         service.setId(id);
-        service.setTitle("Yağ Değişimi");
+        service.setTitle("Bakım");
         service.setDescription("Motor yağı değiştirilecek.");
         service.setStatus(status);
         service.setCar(car);

@@ -75,7 +75,7 @@
     "createDescription": "Create a new service record for an existing car.",
     "title": "Title",
     "description": "Description",
-    "titlePlaceholder": "Example: Oil Change",
+    "titlePlaceholder": "Select a service type",
     "descriptionPlaceholder": "Example: Engine oil and filter replacement",
     "selectCar": "Select Car",
     "selectCarPlaceholder": "Search by plate, brand or model",

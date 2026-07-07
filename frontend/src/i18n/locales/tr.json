@@ -75,7 +75,7 @@
     "createDescription": "Mevcut bir araç için yeni servis kaydı oluşturun.",
     "title": "Başlık",
     "description": "Açıklama",
-    "titlePlaceholder": "Örnek: Yağ Değişimi",
+    "titlePlaceholder": "Servis türü seçin",
     "descriptionPlaceholder": "Örnek: Motor yağı ve filtre değişimi",
     "selectCar": "Araç Seç",
     "selectCarPlaceholder": "Plaka, marka veya model ile ara",
