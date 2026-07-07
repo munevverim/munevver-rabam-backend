@@ -2,6 +2,7 @@ package com.munevver.rabam.service.integration;
 
 import com.munevver.rabam.car.entity.Car;
 import com.munevver.rabam.car.repository.CarRepository;
+import com.munevver.rabam.common.AbstractIntegrationTest;
 import com.munevver.rabam.common.exception.BadRequestException;
 import com.munevver.rabam.service.dto.ServiceUpdateRequest;
 import com.munevver.rabam.service.entity.Service;
@@ -11,15 +12,13 @@ import com.munevver.rabam.service.service.ServiceService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-class MaxActiveServicesConcurrencyIntegrationTest {
+class MaxActiveServicesConcurrencyIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private ServiceService serviceService;

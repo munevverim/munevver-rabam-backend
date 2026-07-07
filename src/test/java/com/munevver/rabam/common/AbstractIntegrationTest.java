@@ -6,25 +6,25 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
-@Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractIntegrationTest {
 
-    @Container
     static final MySQLContainer<?> MYSQL_CONTAINER =
             new MySQLContainer<>("mysql:8.0")
                     .withDatabaseName("rabam_db")
                     .withUsername("rabam_user")
                     .withPassword("rabam_pass");
 
-    @Container
     static final RabbitMQContainer RABBITMQ_CONTAINER =
             new RabbitMQContainer("rabbitmq:3-management")
                     .withUser("rabam", "rabam");
+
+    static {
+        MYSQL_CONTAINER.start();
+        RABBITMQ_CONTAINER.start();
+    }
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {

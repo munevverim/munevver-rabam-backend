@@ -2,6 +2,7 @@ package com.munevver.rabam.service.integration;
 
 import com.munevver.rabam.car.entity.Car;
 import com.munevver.rabam.car.repository.CarRepository;
+import com.munevver.rabam.common.AbstractIntegrationTest;
 import com.munevver.rabam.service.entity.Service;
 import com.munevver.rabam.service.enums.ServiceStatus;
 import com.munevver.rabam.service.repository.ServiceRepository;
@@ -12,14 +13,12 @@ import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest
-class ServiceOptimisticLockingIntegrationTest {
+class ServiceOptimisticLockingIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private EntityManagerFactory entityManagerFactory;
