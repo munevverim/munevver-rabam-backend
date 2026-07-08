@@ -123,6 +123,29 @@ class MaxActiveServicesConcurrencyIntegrationTest extends AbstractIntegrationTes
         assertEquals(2, activeServiceCount);
     }
 
+    @Test
+    void shouldRejectMovingThirdServiceToInProgressWhenTwoServicesAreAlreadyActive() {
+        Service secondActiveService = new Service();
+        secondActiveService.setTitle("Second Active Service");
+        secondActiveService.setDescription("This service is also already in progress");
+        secondActiveService.setStatus(ServiceStatus.IN_PROGRESS);
+        secondActiveService.setCar(carRepository.findById(carId).orElseThrow());
+        serviceRepository.saveAndFlush(secondActiveService);
+
+        ServiceUpdateRequest request = new ServiceUpdateRequest();
+        request.setStatus(ServiceStatus.IN_PROGRESS);
+        request.setVersion(firstPendingServiceVersion);
+
+        assertThrows(
+                BadRequestException.class,
+                () -> serviceService.updateService(firstPendingServiceId, request)
+        );
+
+        long activeServiceCount = serviceRepository.countByCarIdAndStatus(carId, ServiceStatus.IN_PROGRESS);
+
+        assertEquals(2, activeServiceCount);
+    }
+
     private Callable<String> createMoveToInProgressTask(
             Long serviceId,
             Long version,
