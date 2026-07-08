@@ -1,70 +1,273 @@
-# Rabam Car Service Manager
+# Rabam Full Stack Case Projesi
 
-Small car service shop application for managing cars, assigning services, updating service status, filtering services, and keeping an audit trail through RabbitMQ.
+Bu proje, araç servis süreçlerini yönetmek için geliştirilmiş full stack bir web uygulamasıdır.
 
-## Tech Stack
+Uygulama; Spring Boot tabanlı bir backend, React + TypeScript tabanlı bir frontend, MySQL veritabanı, RabbitMQ event sistemi, Docker desteği, çoklu dil desteği, dashboard özetleri ve test yapısını içermektedir.
 
-- Backend: Java 17, Spring Boot, Spring Data JPA, Flyway, MySQL, RabbitMQ, Testcontainers
-- Frontend: React, TypeScript, Axios, Material UI, Vite
-- DevOps: Docker and Docker Compose
+---
 
-## Run With Docker Compose
+## Proje Özellikleri
+
+### Backend Özellikleri
+
+- Spring Boot REST API
+- Katmanlı mimari
+- Araç CRUD işlemleri
+- Servis CRUD işlemleri
+- Servis durum geçiş kontrolü
+- Optimistic locking
+- Pessimistic locking
+- Araç başına maksimum aktif servis kuralı
+- RabbitMQ ile domain event yayınlama
+- Audit event consumer
+- MySQL veritabanı desteği
+- DTO tabanlı request / response yapısı
+- Mapper katmanı
+- Validation desteği
+- Global exception handling
+- Türkçe / İngilizce hata mesajı desteği
+- Swagger / OpenAPI dokümantasyonu
+- Unit test ve integration test desteği
+
+### Frontend Özellikleri
+
+- React + TypeScript
+- Vite
+- Material UI
+- Araç yönetim sayfası
+- Servis yönetim sayfası
+- Dashboard özet kartları
+- Autocomplete ile araç seçimi
+- Araca ve servis durumuna göre filtreleme
+- Dark / light tema desteği
+- Türkçe / İngilizce dil seçimi
+- Axios API client
+- Nginx ile Docker üzerinde frontend yayınlama
+
+---
+
+## Kullanılan Teknolojiler
+
+### Backend
+
+- Java 17
+- Spring Boot 4.1.0
+- Spring Web
+- Spring Data JPA
+- MySQL
+- RabbitMQ
+- Hibernate
+- Lombok
+- Swagger / OpenAPI
+- JUnit 5
+- Mockito
+- Maven
+
+### Frontend
+
+- React
+- TypeScript
+- Vite
+- Material UI
+- Axios
+- i18next
+- react-i18next
+- Nginx
+
+### DevOps
+
+- Docker
+- Docker Compose
+
+---
+
+## Proje Klasör Yapısı
+
+```text
+rabam/
+├── src/
+│   ├── main/
+│   │   ├── java/com/munevver/rabam/
+│   │   │   ├── car/
+│   │   │   ├── service/
+│   │   │   ├── dashboard/
+│   │   │   ├── event/
+│   │   │   ├── common/
+│   │   │   └── config/
+│   │   └── resources/
+│   └── test/
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   ├── pages/
+│   │   ├── components/
+│   │   ├── i18n/
+│   │   └── types/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── docs/
+│   └── screenshots/
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## Mimari Yapı
+
+Backend tarafında katmanlı mimari kullanılmıştır.
+
+```text
+Controller → Service → Repository
+              ↓
+            Mapper
+```
+
+### Katmanların Sorumlulukları
+
+| Katman | Sorumluluk |
+|---|---|
+| Controller | HTTP isteklerini karşılar ve response döner |
+| Service | İş kurallarını ve transaction yönetimini içerir |
+| Repository | Veritabanı işlemlerini gerçekleştirir |
+| Mapper | Entity ve DTO dönüşümlerini yapar |
+| DTO | Request ve response modellerini temsil eder |
+| Exception Handler | Hataları merkezi ve standart şekilde yönetir |
+
+---
+
+## İş Kuralları
+
+Servis modülünde aşağıdaki iş kuralları uygulanmıştır:
+
+```text
+Bir servis ilk oluşturulduğunda varsayılan olarak PENDING durumunda olur.
+
+İzin verilen durum geçişleri:
+PENDING → IN_PROGRESS
+IN_PROGRESS → DONE
+
+DONE son durumdur. DONE durumundan sonra başka bir geçiş yapılamaz.
+
+Bir araç için aynı anda en fazla 2 adet IN_PROGRESS servis bulunabilir.
+
+Servis güncelleme işlemlerinde optimistic locking uygulanır.
+
+Aktif servis limiti kontrol edilirken pessimistic locking kullanılır.
+```
+
+---
+
+## Ekran Görüntüleri
+
+Ekran görüntülerini aşağıdaki klasöre ekleyebilirsin:
+
+```text
+docs/screenshots/
+```
+
+Önerilen dosya isimleri:
+
+```text
+docs/screenshots/cars-page.png
+docs/screenshots/cars-page-2.png
+docs/screenshots/services-page.png
+docs/screenshots/services-page-2.png
+
+
+```
+
+### Araçlar Sayfası
+
+![Araçlar Sayfası](docs/screenshots/cars-page.png)
+
+### Servisler Sayfası
+
+![Servisler Sayfası](docs/screenshots/services-page.png)
+
+
+
+---
+
+## Docker ile Çalıştırma
+
+Projeyi çalıştırmanın en kolay yolu Docker Compose kullanmaktır.
+
+### Tüm servisleri başlatma
 
 ```bash
 docker compose up -d --build
 ```
 
-Default URLs:
+Bu komut aşağıdaki servisleri ayağa kaldırır:
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8080/api
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- RabbitMQ Management: http://localhost:15683
+```text
+MySQL
+RabbitMQ
+Spring Boot Backend
+React Frontend
+```
 
-Stop the stack:
+### Tüm servisleri durdurma
 
 ```bash
 docker compose down
 ```
 
-Remove persisted MySQL data too:
+### Servisleri durdurup volume verilerini silme
 
 ```bash
 docker compose down -v
 ```
 
-## Configuration
+> Dikkat: Bu komut veritabanındaki kayıtları da siler.
 
-Docker Compose supports environment overrides without editing source files:
+---
 
-```bash
-MYSQL_DATABASE=rabam_db
-MYSQL_USER=rabam_user
-MYSQL_PASSWORD=rabam_pass
-MYSQL_PORT=3333
-BACKEND_PORT=8080
-FRONTEND_PORT=5173
-VITE_API_BASE_URL=http://localhost:8080/api
-docker compose up -d --build
+## Uygulama Adresleri
+
+| Servis | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend Swagger | http://localhost:8080/swagger-ui.html |
+| Dashboard Summary API | http://localhost:8080/api/dashboard/summary |
+| RabbitMQ Management | http://localhost:15683 |
+
+RabbitMQ giriş bilgileri:
+
+```text
+username: rabam
+password: rabam
 ```
 
-The backend also reads standard Spring environment variables such as `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_RABBITMQ_HOST`, `SPRING_RABBITMQ_USERNAME`, and `SPRING_RABBITMQ_PASSWORD`.
+---
 
-## Local Development
+## Manuel Çalıştırma
 
-Start MySQL and RabbitMQ:
+Docker ile tüm sistemi çalıştırmak yerine backend ve frontend ayrı ayrı da çalıştırılabilir.
+
+### MySQL ve RabbitMQ başlatma
 
 ```bash
 docker compose up -d mysql rabbitmq
 ```
 
-Run backend:
+### Backend çalıştırma
+
+Proje ana dizininde:
 
 ```bash
 mvn spring-boot:run
 ```
 
-Run frontend:
+Backend şu adreste çalışır:
+
+```text
+http://localhost:8080
+```
+
+### Frontend çalıştırma
 
 ```bash
 cd frontend
@@ -72,52 +275,232 @@ npm install
 npm run dev
 ```
 
-## Tests
+Frontend şu adreste çalışır:
 
-Backend tests:
+```text
+http://localhost:5173
+```
+
+---
+
+## API Endpointleri
+
+### Araç API
+
+| Method | Endpoint | Açıklama |
+|---|---|---|
+| GET | `/api/cars` | Araçları sayfalı şekilde listeler |
+| POST | `/api/cars` | Yeni araç oluşturur |
+| PUT | `/api/cars/{id}` | Mevcut aracı günceller |
+
+### Servis API
+
+| Method | Endpoint | Açıklama |
+|---|---|---|
+| GET | `/api/services` | Servisleri filtreli ve sayfalı şekilde listeler |
+| GET | `/api/services/{id}` | ID değerine göre servis getirir |
+| POST | `/api/services` | Yeni servis oluşturur |
+| PUT | `/api/services/{id}` | Servis bilgilerini veya durumunu günceller |
+
+### Dashboard API
+
+| Method | Endpoint | Açıklama |
+|---|---|---|
+| GET | `/api/dashboard/summary` | Dashboard için özet verileri getirir |
+
+---
+
+## Örnek Requestler
+
+### Araç Oluşturma
+
+```json
+{
+  "licensePlate": "34 ABC 123",
+  "brand": "Toyota",
+  "model": "Corolla"
+}
+```
+
+### Servis Oluşturma
+
+```json
+{
+  "title": "Yağ Değişimi",
+  "description": "Motor yağı ve yağ filtresi değiştirilecek",
+  "carId": 1
+}
+```
+
+### Servis Durumu Güncelleme
+
+```json
+{
+  "status": "IN_PROGRESS",
+  "version": 0
+}
+```
+
+---
+
+## Çoklu Dil Desteği
+
+Projede Türkçe ve İngilizce dil desteği bulunmaktadır.
+
+### Frontend Dil Desteği
+
+Frontend arayüzünde dil seçici üzerinden dil değiştirilebilir.
+
+Desteklenen diller:
+
+```text
+TR
+EN
+```
+
+### Backend Dil Desteği
+
+Backend hata ve bilgilendirme mesajları `Accept-Language` header değerine göre döner.
+
+Örnek:
+
+```http
+Accept-Language: tr
+```
+
+```http
+Accept-Language: en
+```
+
+---
+
+## RabbitMQ Event Akışı
+
+Backend tarafında araç veya servis kayıtları oluşturulduğunda ya da güncellendiğinde domain event yayınlanır.
+
+Örnek event tipleri:
+
+```text
+CAR_CREATED
+CAR_UPDATED
+SERVICE_CREATED
+SERVICE_UPDATED
+```
+
+Bu eventler RabbitMQ exchange üzerinden ilgili kuyruğa gönderilir ve audit consumer tarafından tüketilir.
+
+RabbitMQ yönetim paneli:
+
+```text
+http://localhost:15683
+```
+
+---
+
+## Testler
+
+### Backend testlerini çalıştırma
 
 ```bash
 mvn test
 ```
 
-Frontend build check:
+Projede aşağıdaki test türleri bulunmaktadır:
+
+```text
+Unit testler
+Integration testler
+Optimistic locking testi
+Pessimistic locking / max active service concurrency testi
+```
+
+### Frontend build testi
 
 ```bash
 cd frontend
 npm run build
 ```
 
-## Main API
+---
 
-- `GET /api/cars` - paginated car list
-- `POST /api/cars` - create car
-- `PUT /api/cars/{id}` - update car
-- `GET /api/services?carId=&status=` - paginated service list with optional filters
-- `POST /api/services` - create service for a car
-- `PUT /api/services/{id}` - update service title, description, or status
-- `GET /api/audit-logs` - paginated audit log list
+## Logları Görüntüleme
 
-Service titles are selected from this catalog: `Bakım`, `Muayene`, `Araç Yıkama`, `Lastik`, `Akaryakıt`, `Ekspertiz`, `Çekici`, `Sigorta`.
+### Tüm Docker logları
 
-## Business Rules
+```bash
+docker compose logs -f
+```
 
-License plates are normalized to uppercase and validated with this generic pattern: uppercase letters, numbers, spaces, and hyphens. Duplicate license plates return `409 Conflict`.
+### Backend logları
 
-Service status is a forward-only state machine: `PENDING -> IN_PROGRESS -> DONE`. Skipping, going backward, or re-entering the same state returns `400 Bad Request`.
+```bash
+docker logs -f rabam-backend
+```
 
-Service updates use optimistic locking through the `version` field. A stale update returns `409 Conflict` instead of silently overwriting another user's change.
+### Frontend logları
 
-## Max 2 Active Services Guarantee
+```bash
+docker logs -f rabam-frontend
+```
 
-When a service moves to `IN_PROGRESS`, the backend takes a pessimistic write lock on the parent car row and then counts active services for that car inside the same transaction. Because all transitions into `IN_PROGRESS` go through this locked path, concurrent requests for the same car are serialized before the count check. This prevents two simultaneous updates from both seeing the same active count and allowing the car to exceed two active services.
+### RabbitMQ logları
 
-## Audit And Event Logging
+```bash
+docker logs -f rabam-rabbitmq
+```
 
-Car and service create/update operations publish domain events after the database transaction commits. RabbitMQ delivers those events to a consumer that persists them into `audit_logs` with event type, entity type, entity ID, timestamp, and JSON payload, and also writes a standardized application log entry.
+### MySQL logları
 
-## Assumptions And Trade-offs
+```bash
+docker logs -f rabam-mysql
+```
 
-- MySQL is the primary runtime database; H2 is kept only for lightweight test support.
-- The service title is intentionally constrained to a fixed catalog to keep the UI consistent for shop staff.
-- Docker health checks focus on container readiness for local development and review environments.
-- With more time, row-level frontend refresh could be made more granular for filtered service lists, and the audit event publisher could be extended with an outbox table for stronger delivery guarantees.
+---
+
+## Docker Servisleri
+
+| Container | Açıklama |
+|---|---|
+| rabam-mysql | MySQL veritabanı |
+| rabam-rabbitmq | RabbitMQ mesaj kuyruğu |
+| rabam-backend | Spring Boot backend servisi |
+| rabam-frontend | Nginx üzerinde çalışan React frontend |
+
+---
+
+## Geliştirme Notları
+
+Bu proje aşağıdaki başlıkları göstermek amacıyla geliştirilmiştir:
+
+```text
+Temiz katmanlı mimari
+DTO kullanımı
+Mapper katmanı
+Validation
+Global exception handling
+İş kurallarının service katmanında uygulanması
+Concurrency kontrolü
+Optimistic locking
+Pessimistic locking
+RabbitMQ entegrasyonu
+Docker ile full stack çalışma ortamı
+Frontend i18n
+Backend i18n
+Modern React arayüzü
+Otomatik testler
+```
+
+
+## CI Pipeline
+
+Projede GitHub Actions CI pipeline bulunmaktadır. Her push ve pull request işleminde backend testleri ve frontend build işlemi otomatik olarak çalıştırılır.
+
+```bash
+mvn test
+cd frontend && npm run build
+
+---
+
+## Geliştirici
+
+Bu proje Münevver Verim tarafından geliştirilmiştir.
